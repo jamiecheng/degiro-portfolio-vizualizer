@@ -1,0 +1,5 @@
+.idea/*
+venv/*
+local_config.py
+cache.sqlite
+__pycache__/*
