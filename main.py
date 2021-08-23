@@ -49,12 +49,16 @@ if __name__ == '__main__':
     df_close = df.to_numpy()
 
     # vector of portfolio value on each day
-    portfolio_history = np.zeros((len(product_ids), 1))
+    portfolio_history = np.zeros(len(df.index))
 
     for i in range(0, np.shape(ticker_holdings)[1]):
         portfolio_history = portfolio_history + (df_close[:, i] * ticker_holdings[:, i])
 
     plt.plot(df.index, portfolio_history.transpose())
+
+    cr = (portfolio_history[len(portfolio_history) - 1] / portfolio_history[0]) * 100
+
+    print('Cumulative return : {0}%'.format(cr))
 
     plt.show()
 
