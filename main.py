@@ -16,6 +16,8 @@ if __name__ == '__main__':
     print('retrieving transaction history...')
     th = account.get_transactions(datetime.datetime(1980, 1, 1), datetime.datetime.now())
 
+    total_cost = th['cost'].to_numpy().sum()
+
     first_transaction_date = th.iloc[[0]].index.item()
     product_ids = th['id'].unique().tolist()
 
@@ -56,9 +58,9 @@ if __name__ == '__main__':
 
     plt.plot(df.index, portfolio_history.transpose())
 
-    cr = (portfolio_history[len(portfolio_history) - 1] / portfolio_history[0]) * 100
+    gain = ((portfolio_history[len(portfolio_history) - 1] + total_cost) / -total_cost) * 100
 
-    print('Cumulative return : {:.2f}%'.format(cr))
+    print('Portfolio gain : {:.2f}%'.format(gain))
 
     plt.show()
 
