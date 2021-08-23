@@ -62,6 +62,13 @@ if __name__ == '__main__':
 
     print('Portfolio gain : {:.2f}%'.format(gain))
 
+    diff = portfolio_history[1:] - portfolio_history[:-1]
+    daily_returns = diff / portfolio_history[1:] * 100
+
+    sharpe = (252**0.5) * (daily_returns.mean() / daily_returns.std())
+
+    print('Sharpe ratio : {:.2f}'.format(sharpe))
+
     plt.show()
 
     account.logout()
