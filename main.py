@@ -14,22 +14,16 @@ if __name__ == '__main__':
     print(account.login(local_config.username, local_config.password))
 
     print('retrieving transaction history...')
-    th = account.get_transactions(datetime.datetime(2020, 1, 1), datetime.datetime.now())
+    th = account.get_transactions(datetime.datetime(1980, 1, 1), datetime.datetime.now())
 
     first_transaction_date = th.iloc[[0]].index.item()
-    tickers = th['ticker'].unique().tolist()
+    product_ids = th['id'].unique().tolist()
 
     print('retrieving stock data...')
-    session = requests_cache.CachedSession(cache_name='cache', backend='sqlite',
-                                           expire_after=datetime.timedelta(days=3))
-
-    session.headers = DEFAULT_HEADERS
-
-    # User pandas_reader.data.DataReader to load the desired data. As simple as that.
-    df = data.DataReader(tickers, 'yahoo', first_transaction_date, datetime.datetime.now(), session=session)
+    df = account.get_product_history(product_ids, first_transaction_date, datetime.datetime.now())
 
     # construct matrix that holds the quantity of each ticker on each day
-    ticker_holdings = np.zeros((len(df.index), len(tickers)), dtype=int)
+    ticker_holdings = np.zeros((len(df.index), len(product_ids)), dtype=int)
 
     # iterate through each day since the first transaction
     for i in range(0, len(df.index)):
@@ -44,18 +38,18 @@ if __name__ == '__main__':
 
             if isinstance(transactions, pd.DataFrame):
                 for index, row in transactions.iterrows():
-                    ticker_holdings[i][tickers.index(row['ticker'])] = \
-                        ticker_holdings[i][tickers.index(row['ticker'])] + row['quantity']
+                    ticker_holdings[i][product_ids.index(row['id'])] = \
+                        ticker_holdings[i][product_ids.index(row['id'])] + row['quantity']
             else:
-                ticker_holdings[i][tickers.index(transactions['ticker'])] = \
-                    ticker_holdings[i][tickers.index(transactions['ticker'])] + transactions['quantity']
+                ticker_holdings[i][product_ids.index(transactions['id'])] = \
+                    ticker_holdings[i][product_ids.index(transactions['id'])] + transactions['quantity']
 
     print('calculating portfolio...')
 
-    df_close = df['Adj Close'].to_numpy()
+    df_close = df.to_numpy()
 
     # vector of portfolio value on each day
-    portfolio_history = np.zeros((len(tickers), 1))
+    portfolio_history = np.zeros((len(product_ids), 1))
 
     for i in range(0, np.shape(ticker_holdings)[1]):
         portfolio_history = portfolio_history + (df_close[:, i] * ticker_holdings[:, i])

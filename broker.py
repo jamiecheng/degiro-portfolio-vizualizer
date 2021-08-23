@@ -59,19 +59,10 @@ class Broker:
 
         df = pd.concat(dfs, axis=1, join='outer')
 
-        return df.loc[start_date.strftime('%Y-%m-%d'): end_date.strftime('%Y-%m-%d')]
+        return df.loc[start_date: end_date]
 
     def get_cash_funds(self):
         return self.degiro.getdata(degiroapi.Data.Type.CASHFUNDS)
 
     def logout(self):
         self.degiro.logout()
-
-
-account = Broker()
-
-print(account.login(local_config.username, local_config.password))
-
-print(account.get_product_history([1157277, 1147582], datetime(2010, 1, 1), datetime.now()))
-
-account.logout()
