@@ -1,12 +1,11 @@
-from pandas_datareader import data
-from pandas_datareader.yahoo.headers import DEFAULT_HEADERS
+import datetime
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import requests_cache
+
 import local_config
 from broker import Broker
-import datetime
-import numpy as np
 
 if __name__ == '__main__':
     account = Broker()
