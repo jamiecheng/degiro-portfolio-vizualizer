@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     cr = (portfolio_history[len(portfolio_history) - 1] / portfolio_history[0]) * 100
 
-    print('Cumulative return : {0}%'.format(cr))
+    print('Cumulative return : {:.2f}%'.format(cr))
 
     plt.show()
 
