@@ -1,10 +1,10 @@
 import datetime
+import getpass
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import local_config
 from broker import Broker
 
 
@@ -21,7 +21,10 @@ class Portfolio:
         self.total_cost = 0
 
     def login(self, username, password):
-        self.account.login(username, password)
+        resp = self.account.login(username, password)
+
+        if not resp['data']['id']:
+            return None
 
         return self
 
@@ -81,7 +84,11 @@ class Portfolio:
 
 
 if __name__ == '__main__':
-    p = Portfolio().login(local_config.username, local_config.password)
+    p = Portfolio().login(input('Username: '), getpass.getpass())
+
+    if not p:
+        print('Login error')
+        exit()
 
     p.update()
 
