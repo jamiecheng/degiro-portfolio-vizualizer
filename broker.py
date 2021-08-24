@@ -60,6 +60,9 @@ class Broker:
     def get_cash_funds(self):
         return self.degiro.getdata(degiroapi.Data.Type.CASHFUNDS)
 
+    def get_portfolio_data(self):
+        return self.degiro.getdata(degiroapi.Data.Type.PORTFOLIO, True)
+
     def logout(self):
         self.degiro.logout()
 
