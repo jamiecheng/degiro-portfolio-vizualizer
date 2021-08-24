@@ -13,7 +13,7 @@ if __name__ == '__main__':
     print(account.login(local_config.username, local_config.password))
 
     print('retrieving transaction history...')
-    th = account.get_transactions(datetime.datetime(1980, 1, 1), datetime.datetime.now())
+    th = account.get_transaction_history()
 
     total_cost = th['cost'].to_numpy().sum()
 
@@ -24,13 +24,13 @@ if __name__ == '__main__':
     df = account.get_product_history(product_ids, first_transaction_date, datetime.datetime.now())
 
     # construct matrix that holds the quantity of each ticker on each day
-    ticker_holdings = np.zeros((len(df.index), len(product_ids)), dtype=int)
+    product_holdings = np.zeros((len(df.index), len(product_ids)), dtype=int)
 
     # iterate through each day since the first transaction
     for i in range(0, len(df.index)):
         # we start the day with the same holdings as the day before
         if i != 0:
-            ticker_holdings[i] = ticker_holdings[i - 1]
+            product_holdings[i] = product_holdings[i - 1]
 
         # is there a transaction at this date?
         if df.index[i].strftime('%Y-%m-%d') in th.index:
@@ -39,11 +39,11 @@ if __name__ == '__main__':
 
             if isinstance(transactions, pd.DataFrame):
                 for index, row in transactions.iterrows():
-                    ticker_holdings[i][product_ids.index(row['id'])] = \
-                        ticker_holdings[i][product_ids.index(row['id'])] + row['quantity']
+                    product_holdings[i][product_ids.index(row['id'])] = \
+                        product_holdings[i][product_ids.index(row['id'])] + row['quantity']
             else:
-                ticker_holdings[i][product_ids.index(transactions['id'])] = \
-                    ticker_holdings[i][product_ids.index(transactions['id'])] + transactions['quantity']
+                product_holdings[i][product_ids.index(transactions['id'])] = \
+                    product_holdings[i][product_ids.index(transactions['id'])] + transactions['quantity']
 
     print('calculating portfolio...')
 
@@ -52,8 +52,8 @@ if __name__ == '__main__':
     # vector of portfolio value on each day
     portfolio_history = np.zeros(len(df.index))
 
-    for i in range(0, np.shape(ticker_holdings)[1]):
-        portfolio_history = portfolio_history + (df_close[:, i] * ticker_holdings[:, i])
+    for i in range(0, np.shape(product_holdings)[1]):
+        portfolio_history = portfolio_history + (df_close[:, i] * product_holdings[:, i])
 
     plt.plot(df.index, portfolio_history.transpose())
 
