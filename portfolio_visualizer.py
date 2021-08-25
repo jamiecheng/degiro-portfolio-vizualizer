@@ -80,6 +80,7 @@ class Portfolio:
         self.portfolio_value = np.empty(0)
         self.portfolio_value_total = np.empty(0)
         self.portfolio_days = None
+        self.stock_history_close = np.empty(0)
         self.total_cost = 0
 
     def update(self, session: Broker):
@@ -92,7 +93,7 @@ class Portfolio:
         product_ids = th['id'].unique().tolist()
         self.portfolio_symbols = th['ticker'].unique().tolist()
 
-        df = session.get_product_history(product_ids, first_transaction_date, datetime.now())
+        df = session.get_product_history(product_ids, first_transaction_date, datetime.now()).dropna()
 
         self.portfolio_days = df.index
 
@@ -119,16 +120,19 @@ class Portfolio:
                         self.portfolio_quantities[i][product_ids.index(transactions['id'])] + transactions[
                             'quantity']
 
-        df_close = df.to_numpy()
+        self.stock_history_close = df.to_numpy()
 
-        self.portfolio_value = np.multiply(df_close, self.portfolio_quantities)
+        self.portfolio_value = np.multiply(self.stock_history_close, self.portfolio_quantities)
         self.portfolio_value_total = self.portfolio_value.sum(axis=1)
+
+    def get_symbols(self):
+        return self.portfolio_symbols
 
     def get_sharpe(self):
         diff = self.portfolio_value_total[1:] - self.portfolio_value_total[:-1]
         daily_returns = diff / self.portfolio_value_total[1:] * 100
 
-        return (252 ** 0.5) * (np.nanmean(daily_returns) / np.nanstd(daily_returns))
+        return (252 ** 0.5) * (np.mean(daily_returns) / np.std(daily_returns))
 
     def get_profit_loss(self):
         return ((self.portfolio_value_total[
@@ -137,3 +141,6 @@ class Portfolio:
     def get_allocation(self):
         return self.portfolio_value[len(self.portfolio_value) - 2] / \
                self.portfolio_value[len(self.portfolio_value) - 2].sum(axis=0) * 100
+
+    def get_stocks_correlation(self):
+        return np.corrcoef(self.stock_history_close.transpose())
