@@ -38,14 +38,15 @@ class Portfolio:
         self.total_cost = th['cost'].to_numpy().sum()
 
         first_transaction_date = th.iloc[[0]].index.item()
-        self.portfolio_symbols = th['id'].unique().tolist()
+        product_ids = th['id'].unique().tolist()
+        self.portfolio_symbols = th['ticker'].unique().tolist()
 
-        df = self.account.get_product_history(self.portfolio_symbols, first_transaction_date, datetime.datetime.now())
+        df = self.account.get_product_history(product_ids, first_transaction_date, datetime.datetime.now())
 
         self.portfolio_days = df.index
 
         # construct matrix that holds the quantity of each ticker on each day
-        self.portfolio_quantities = np.zeros((len(df.index), len(self.portfolio_symbols)), dtype=int)
+        self.portfolio_quantities = np.zeros((len(df.index), len(product_ids)), dtype=int)
 
         # iterate through each day since the first transaction
         for i in range(0, len(df.index)):
@@ -60,11 +61,11 @@ class Portfolio:
 
                 if isinstance(transactions, pd.DataFrame):
                     for index, row in transactions.iterrows():
-                        self.portfolio_quantities[i][self.portfolio_symbols.index(row['id'])] = \
-                            self.portfolio_quantities[i][self.portfolio_symbols.index(row['id'])] + row['quantity']
+                        self.portfolio_quantities[i][product_ids.index(row['id'])] = \
+                            self.portfolio_quantities[i][product_ids.index(row['id'])] + row['quantity']
                 else:
-                    self.portfolio_quantities[i][self.portfolio_symbols.index(transactions['id'])] = \
-                        self.portfolio_quantities[i][self.portfolio_symbols.index(transactions['id'])] + transactions[
+                    self.portfolio_quantities[i][product_ids.index(transactions['id'])] = \
+                        self.portfolio_quantities[i][product_ids.index(transactions['id'])] + transactions[
                             'quantity']
 
         df_close = df.to_numpy()
@@ -82,19 +83,20 @@ class Portfolio:
         return ((self.portfolio_value_total[
                      len(self.portfolio_value_total) - 2] + self.total_cost) / -self.total_cost) * 100
 
+    def get_allocation(self):
+        return self.portfolio_value[len(self.portfolio_value) - 2] / \
+               self.portfolio_value[len(self.portfolio_value) - 2].sum(axis=0) * 100
+
 
 if __name__ == '__main__':
     p = Portfolio().login(input('Username: '), getpass.getpass())
 
-    if not p:
-        print('Login error')
-        exit()
-
     p.update()
+
+    print('Sharpe ratio : {:.2f}'.format(p.get_sharpe()))
+    print('Portfolio gain : {:.2f}%'.format(p.get_profit_loss()))
+    print('Allocation : {0}'.format(p.get_allocation()))
 
     plt.plot(p.portfolio_days, p.portfolio_value_total)
 
     plt.show()
-
-    print('Sharpe ratio : {:.2f}'.format(p.get_sharpe()))
-    print('Portfolio gain : {:.2f}%'.format(p.get_profit_loss()))
