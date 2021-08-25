@@ -75,11 +75,11 @@ class Broker:
 
 class Portfolio:
     def __init__(self):
-        self.portfolio_symbols = []
-        self.portfolio_quantities = []
-        self.portfolio_value = []
-        self.portfolio_value_total = []
-        self.portfolio_days = []
+        self.portfolio_symbols = np.empty(0)
+        self.portfolio_quantities = np.empty(0)
+        self.portfolio_value = np.empty(0)
+        self.portfolio_value_total = np.empty(0)
+        self.portfolio_days = None
         self.total_cost = 0
 
     def update(self, session: Broker):
