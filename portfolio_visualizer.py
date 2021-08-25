@@ -82,9 +82,9 @@ class Portfolio:
         self.portfolio_days = []
         self.total_cost = 0
 
-    def update(self, sess: Broker):
+    def update(self, session: Broker):
         print('Updating portfolio...')
-        th = sess.get_transaction_history()
+        th = session.get_transaction_history()
 
         self.total_cost = th['cost'].to_numpy().sum()
 
@@ -92,7 +92,7 @@ class Portfolio:
         product_ids = th['id'].unique().tolist()
         self.portfolio_symbols = th['ticker'].unique().tolist()
 
-        df = sess.get_product_history(product_ids, first_transaction_date, datetime.now())
+        df = session.get_product_history(product_ids, first_transaction_date, datetime.now())
 
         self.portfolio_days = df.index
 
