@@ -19,7 +19,7 @@ if __name__ == '__main__':
     print('Symbols : {0}'.format(p.get_symbols()))
     print('Correlation : {0}'.format(p.get_stocks_correlation()))
 
-    plt.plot(p.portfolio_days, p.portfolio_value_total)
+    plt.plot(p.portfolio_days, p.portfolio_value_summed)
     plt.show()
 
     plt.matshow(p.get_stocks_correlation())

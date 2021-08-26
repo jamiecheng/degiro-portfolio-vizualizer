@@ -64,7 +64,11 @@ class Broker:
         return df.loc[start_date: end_date]
 
     def get_cash_funds(self):
-        return self.degiro.getdata(degiroapi.Data.Type.CASHFUNDS)
+        ret = self.degiro.getdata(degiroapi.Data.Type.CASHFUNDS)[0]
+
+        ret = ret.split(' ')
+
+        return float(ret[1])
 
     def get_portfolio_data(self):
         return self.degiro.getdata(degiroapi.Data.Type.PORTFOLIO, True)
@@ -78,16 +82,17 @@ class Portfolio:
         self.portfolio_symbols = np.empty(0)
         self.portfolio_quantities = np.empty(0)
         self.portfolio_value = np.empty(0)
-        self.portfolio_value_total = np.empty(0)
+        self.portfolio_value_summed = np.empty(0)
         self.portfolio_days = None
         self.stock_history_close = np.empty(0)
         self.total_cost = 0
+        self.portfolio_total_value = 0
 
     def update(self, session: Broker):
         print('Updating portfolio...')
         th = session.get_transaction_history()
 
-        self.total_cost = th['cost'].to_numpy().sum()
+        self.total_cost = th['cost'].sum()
 
         first_transaction_date = th.iloc[[0]].index.item()
         product_ids = th['id'].unique().tolist()
@@ -123,20 +128,21 @@ class Portfolio:
         self.stock_history_close = df.to_numpy()
 
         self.portfolio_value = np.multiply(self.stock_history_close, self.portfolio_quantities)
-        self.portfolio_value_total = self.portfolio_value.sum(axis=1)
+        self.portfolio_value_summed = self.portfolio_value.sum(axis=1)
+        self.portfolio_total_value = \
+            self.portfolio_value_summed[len(self.portfolio_value_summed) - 1] + session.get_cash_funds()
 
     def get_symbols(self):
         return self.portfolio_symbols
 
     def get_sharpe(self):
-        diff = self.portfolio_value_total[1:] - self.portfolio_value_total[:-1]
-        daily_returns = diff / self.portfolio_value_total[1:] * 100
+        diff = self.portfolio_value_summed[1:] - self.portfolio_value_summed[:-1]
+        daily_returns = diff / self.portfolio_value_summed[1:] * 100
 
         return (252 ** 0.5) * (np.mean(daily_returns) / np.std(daily_returns))
 
     def get_profit_loss(self):
-        return ((self.portfolio_value_total[
-                     len(self.portfolio_value_total) - 2] + self.total_cost) / -self.total_cost) * 100
+        return ((self.portfolio_total_value + self.total_cost) / -self.total_cost) * 100
 
     def get_allocation(self):
         return self.portfolio_value[len(self.portfolio_value) - 2] / \
@@ -144,3 +150,6 @@ class Portfolio:
 
     def get_stocks_correlation(self):
         return np.corrcoef(self.stock_history_close.transpose())
+
+    def get_account_value(self):
+        return self.portfolio_total_value
