@@ -123,6 +123,8 @@ class Portfolio:
                                                     index=self.stock_history_df.index,
                                                     columns=self.stock_history_df.columns.values)
 
+        return self
+
     def get_symbols(self) -> list:
         return self.stock_history_df.columns.values
 
