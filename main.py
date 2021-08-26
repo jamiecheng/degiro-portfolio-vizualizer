@@ -14,8 +14,9 @@ if __name__ == '__main__':
 
     p.update(session)
 
+    print('Portfolio gain : {:.2f}%'.format(p.get_net_change()))
+    print('Benchmark with VWRL {:.2f}%'.format(p.benchmark(4586985, session)))
     print('Sharpe ratio : {:.2f}'.format(p.get_sharpe()))
-    print('Portfolio gain : {:.2f}%'.format(p.get_profit_loss()))
     print(p.get_allocation())
 
     p.get_value_over_time().plot()

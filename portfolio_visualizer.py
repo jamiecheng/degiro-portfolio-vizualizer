@@ -128,15 +128,19 @@ class Portfolio:
     def get_symbols(self) -> list:
         return self.stock_history_df.columns.values
 
-    def get_value_over_time(self) -> pd.DataFrame:
-        return self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1)
+    def get_value_over_time(self) -> pd.Series:
+        s = self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1)
+
+        s.name = 'Portfolio'
+
+        return s
 
     def get_sharpe(self) -> float:
         daily_return = self.get_value_over_time().pct_change(1)
 
         return (252 ** 0.5) * (daily_return.mean() / daily_return.std())
 
-    def get_profit_loss(self) -> float:
+    def get_net_change(self) -> float:
         portfolio_total_value = \
             self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1).tail(1).iloc[0] + self.cash_fund
 
@@ -149,12 +153,22 @@ class Portfolio:
 
         current_holding['EUR'] = self.cash_fund
 
-        return current_holding.apply(lambda x: x / x.sum(), axis=1)
+        current_holding = current_holding.apply(lambda x: x / x.sum(), axis=1) * 100
+
+        return current_holding.loc[:, (current_holding != 0).any(axis=0)]
 
     def get_stocks_correlation(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         df = self.stock_history_df.loc[start_date:end_date]
 
         return df.corr()
 
-    def get_account_value(self):
-        return self.portfolio_total_value
+    def get_account_value(self) -> float:
+        return self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1).tail(1).iloc[0] + self.cash_fund
+
+    def benchmark(self, product_id: int, session: Broker) -> float:
+        pdf = self.get_value_over_time()
+        df = session.get_product_history([product_id], pdf.index[0], pdf.index[len(pdf.index) - 1]).iloc[:, 0]
+
+        daily_return_df = df.pct_change(1) * 100
+
+        return self.get_net_change() - daily_return_df.sum()
