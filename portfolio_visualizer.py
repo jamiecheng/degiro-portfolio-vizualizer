@@ -79,77 +79,80 @@ class Broker:
 
 class Portfolio:
     def __init__(self):
-        self.portfolio_symbols = np.empty(0)
-        self.portfolio_quantities = np.empty(0)
-        self.portfolio_value = np.empty(0)
-        self.portfolio_value_summed = np.empty(0)
-        self.portfolio_days = None
-        self.stock_history_close = np.empty(0)
-        self.total_cost = 0
-        self.portfolio_total_value = 0
+        self.transaction_history_df = None
+        self.portfolio_quantities_df = None
+        self.stock_history_df = None
+        self.cash_fund = None
 
     def update(self, session: Broker):
         print('Updating portfolio...')
-        th = session.get_transaction_history()
+        self.cash_fund = session.get_cash_funds()
 
-        self.total_cost = th['cost'].sum()
+        self.transaction_history_df = session.get_transaction_history()
 
-        first_transaction_date = th.iloc[[0]].index.item()
-        product_ids = th['id'].unique().tolist()
-        self.portfolio_symbols = th['ticker'].unique().tolist()
+        first_transaction_date = self.transaction_history_df.iloc[[0]].index.item()
+        product_ids = self.transaction_history_df['id'].unique().tolist()
 
-        df = session.get_product_history(product_ids, first_transaction_date, datetime.now()).dropna()
-
-        self.portfolio_days = df.index
+        self.stock_history_df = session.get_product_history(product_ids, first_transaction_date,
+                                                            datetime.now()).dropna()
 
         # construct matrix that holds the quantity of each ticker on each day
-        self.portfolio_quantities = np.zeros((len(df.index), len(product_ids)), dtype=int)
+        portfolio_quantities = np.zeros((len(self.stock_history_df.index), len(product_ids)), dtype=int)
 
         # iterate through each day since the first transaction
-        for i in range(0, len(df.index)):
+        for i in range(0, len(self.stock_history_df.index)):
             # we start the day with the same holdings as the day before
             if i != 0:
-                self.portfolio_quantities[i] = self.portfolio_quantities[i - 1]
+                portfolio_quantities[i] = portfolio_quantities[i - 1]
 
             # is there a transaction at this date?
-            if df.index[i].strftime('%Y-%m-%d') in th.index:
+            if self.stock_history_df.index[i].strftime('%Y-%m-%d') in self.transaction_history_df.index:
                 # get all transactions on this day
-                transactions = th.loc[str(df.index[i].strftime('%Y-%m-%d'))]
+                transactions = self.transaction_history_df.loc[str(self.stock_history_df.index[i].strftime('%Y-%m-%d'))]
 
                 if isinstance(transactions, pd.DataFrame):
                     for index, row in transactions.iterrows():
-                        self.portfolio_quantities[i][product_ids.index(row['id'])] = \
-                            self.portfolio_quantities[i][product_ids.index(row['id'])] + row['quantity']
+                        portfolio_quantities[i][product_ids.index(row['id'])] = \
+                            portfolio_quantities[i][product_ids.index(row['id'])] + row['quantity']
                 else:
-                    self.portfolio_quantities[i][product_ids.index(transactions['id'])] = \
-                        self.portfolio_quantities[i][product_ids.index(transactions['id'])] + transactions[
+                    portfolio_quantities[i][product_ids.index(transactions['id'])] = \
+                        portfolio_quantities[i][product_ids.index(transactions['id'])] + transactions[
                             'quantity']
 
-        self.stock_history_close = df.to_numpy()
+        self.portfolio_quantities_df = pd.DataFrame(data=portfolio_quantities,
+                                                    index=self.stock_history_df.index,
+                                                    columns=self.stock_history_df.columns.values)
 
-        self.portfolio_value = np.multiply(self.stock_history_close, self.portfolio_quantities)
-        self.portfolio_value_summed = self.portfolio_value.sum(axis=1)
-        self.portfolio_total_value = \
-            self.portfolio_value_summed[len(self.portfolio_value_summed) - 1] + session.get_cash_funds()
+    def get_symbols(self) -> list:
+        return self.stock_history_df.columns.values
 
-    def get_symbols(self):
-        return self.portfolio_symbols
+    def get_value_over_time(self) -> pd.DataFrame:
+        return self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1)
 
-    def get_sharpe(self):
-        diff = self.portfolio_value_summed[1:] - self.portfolio_value_summed[:-1]
-        daily_returns = diff / self.portfolio_value_summed[1:] * 100
+    def get_sharpe(self) -> float:
+        daily_return = self.get_value_over_time().pct_change(1)
 
-        return (252 ** 0.5) * (np.mean(daily_returns) / np.std(daily_returns))
+        return (252 ** 0.5) * (daily_return.mean() / daily_return.std())
 
-    def get_profit_loss(self):
-        return ((self.portfolio_total_value + self.total_cost) / -self.total_cost) * 100
+    def get_profit_loss(self) -> float:
+        portfolio_total_value = \
+            self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1).tail(1).iloc[0] + self.cash_fund
 
-    def get_allocation(self):
-        return self.portfolio_value[len(self.portfolio_value) - 2] / \
-               self.portfolio_value[len(self.portfolio_value) - 2].sum(axis=0) * 100
+        total_cost = self.transaction_history_df['cost'].sum()
 
-    def get_stocks_correlation(self):
-        return np.corrcoef(self.stock_history_close.transpose())
+        return ((portfolio_total_value + total_cost) / -total_cost) * 100
+
+    def get_allocation(self) -> pd.DataFrame:
+        current_holding = self.stock_history_df.multiply(self.portfolio_quantities_df).tail(1)
+
+        current_holding['EUR'] = self.cash_fund
+
+        return current_holding.apply(lambda x: x / x.sum(), axis=1)
+
+    def get_stocks_correlation(self, start_date: datetime, end_date: datetime) -> pd.DataFrame:
+        df = self.stock_history_df.loc[start_date:end_date]
+
+        return df.corr()
 
     def get_account_value(self):
         return self.portfolio_total_value

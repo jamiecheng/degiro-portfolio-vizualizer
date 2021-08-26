@@ -1,8 +1,9 @@
 import getpass
-
+from datetime import datetime
 import matplotlib.pyplot as plt
 
 from portfolio_visualizer import Broker, Portfolio
+
 
 if __name__ == '__main__':
     session = Broker().login(input('Username: '), getpass.getpass())
@@ -15,12 +16,9 @@ if __name__ == '__main__':
 
     print('Sharpe ratio : {:.2f}'.format(p.get_sharpe()))
     print('Portfolio gain : {:.2f}%'.format(p.get_profit_loss()))
-    print('Allocation : {0}'.format(p.get_allocation()))
-    print('Symbols : {0}'.format(p.get_symbols()))
-    print('Correlation : {0}'.format(p.get_stocks_correlation()))
+    print(p.get_allocation())
+    print(p.get_stocks_correlation(datetime(2010, 1, 1), datetime.now()))
 
-    plt.plot(p.portfolio_days, p.portfolio_value_summed)
-    plt.show()
+    p.get_value_over_time().plot()
 
-    plt.matshow(p.get_stocks_correlation())
     plt.show()
