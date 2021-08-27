@@ -137,7 +137,7 @@ class Portfolio:
         return self
 
     def get_symbols(self) -> list:
-        return self.stock_history_df.columns.values
+        return self.stock_history_df.columns.values.tolist()
 
     def get_value_over_time(self) -> pd.Series:
         s = self.stock_history_df.multiply(self.portfolio_quantities_df).sum(axis=1)
