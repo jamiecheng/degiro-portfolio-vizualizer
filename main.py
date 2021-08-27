@@ -2,7 +2,7 @@ import getpass
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from portfolio_visualizer import Broker, Portfolio
+from portfolio_visualizer.portfolio_visualizer import Broker, Portfolio
 
 
 if __name__ == '__main__':
