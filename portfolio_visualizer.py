@@ -21,23 +21,30 @@ class Broker:
             info = self.degiro.product_info(transaction['productId'])
             date = datetime.strptime(transaction['date'], '%Y-%m-%dT%H:%M:%S%z')
 
-            tsn = {
-                'date': date.strftime('%Y-%m-%d'),
-                'id': transaction['productId'],
-                'name': info['name'],
-                'ticker': info['symbol'],
-                'quantity': transaction['quantity'],
-                'cost': transaction['totalInBaseCurrency'],
-                'fee': transaction['feeInBaseCurrency']
-            }
+            try:
+                tsn = {
+                    'date': date.strftime('%Y-%m-%d'),
+                    'id': transaction['productId'],
+                    'name': info['name'],
+                    'ticker': info['symbol'],
+                    'quantity': transaction['quantity'],
+                    'cost': transaction['totalInBaseCurrency'],
+                    'fee': transaction['feeInBaseCurrency'],
+                    'conversion_rate': None
+                }
 
-            transaction_list.append(tsn)
+                if 'fxRate' in transaction:
+                    tsn['conversion_rate'] = transaction['fxRate']
+
+                transaction_list.append(tsn)
+            except KeyError:
+                print('Transaction history key error')
 
         df = pd.DataFrame(transaction_list).set_index('date')
 
         return df
 
-    def get_product_history(self, product_ids, start_date, end_date):
+    def get_product_history(self, product_ids, start_date, end_date) -> pd.DataFrame:
         dfs = []
 
         for product_id in product_ids:
@@ -92,9 +99,13 @@ class Portfolio:
 
         first_transaction_date = self.transaction_history_df.iloc[[0]].index.item()
         product_ids = self.transaction_history_df['id'].unique().tolist()
+        fxrate = self.transaction_history_df.groupby('ticker', sort=False).mean()['conversion_rate'].fillna(
+            1).to_numpy()
 
-        self.stock_history_df = session.get_product_history(product_ids, first_transaction_date,
-                                                            datetime.now()).dropna()
+        hist = session.get_product_history(product_ids, first_transaction_date,
+                                           datetime.now()).dropna()
+
+        self.stock_history_df = hist.div(fxrate, axis=1)
 
         # construct matrix that holds the quantity of each ticker on each day
         portfolio_quantities = np.zeros((len(self.stock_history_df.index), len(product_ids)), dtype=int)
